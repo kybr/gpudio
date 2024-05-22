@@ -1,9 +1,10 @@
 import taichi as ti
 import pyaudio
+import time
 
 ti.init(arch=ti.gpu)
 
-block = 16384
+block = 4096
 samplerate = 48000
 tau = 6.28318530717958647692
 f0 = 220
@@ -20,19 +21,23 @@ def paint(t: float):
 gui = ti.GUI("GPU Audio", res=shape)
 p = pyaudio.PyAudio()
 
+i = 0
+def callback(in_data, frame_count, time_info, status):
+    global i
+    paint(i)
+    ti.sync()
+    audio = data.to_numpy().sum(axis=0)
+    i += block
+    return (audio, pyaudio.paContinue)
+
 stream = p.open(format=p.get_format_from_width(4),
                 channels=1,
                 rate=samplerate,
-                output=True)
+                output=True,
+                stream_callback=callback)
 
-i = 0
 while gui.running:
-    paint(i)
-    gui.set_image(data)
-    gui.show()
-    stream.write(data.to_numpy().sum(axis=0))
-    i += block
+    pass
 
 stream.close()
 p.terminate()
-
